@@ -1,33 +1,24 @@
 from typing import Type, Dict
+from dataclasses import dataclass, asdict
 
 
+@dataclass
 class InfoMessage:
     """Информационное сообщение о тренировке."""
-    def __init__(self,
-                 training_type: str,
-                 duration: float,
-                 distance: float,
-                 speed: float,
-                 calories: float) -> None:
+    MESSAGE = ("Тип тренировки: {training_type}; "
+               "Длительность: {duration:.3f} ч.; "
+               "Дистанция: {distance:.3f} км; "
+               "Ср. скорость: {speed:.3f} км/ч; "
+               "Потрачено ккал: {calories:.3f}.")
 
-        self.training_type = training_type
-        self.duration = duration
-        self.distance = distance
-        self.speed = speed
-        self.calories = calories
-
-    message = ("Тип тренировки: {}; "
-               "Длительность: {:.3f} ч.; "
-               "Дистанция: {:.3f} км; "
-               "Ср. скорость: {:.3f} км/ч; "
-               "Потрачено ккал: {:.3f}.")
+    training_type: str
+    duration: float
+    distance: float
+    speed: float
+    calories: float
 
     def get_message(self) -> str:
-        return (self.message.format(self.training_type,
-                                    self.duration,
-                                    self.distance,
-                                    self.speed,
-                                    self.calories))
+        return self.MESSAGE.format(**asdict(self))
 
 
 class Training:
@@ -57,11 +48,12 @@ class Training:
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        raise NotImplementedError('Получаем данные в классах-наследниках')
+        raise NotImplementedError('Необходимо определить'
+                                  'метод в дочернем классе.')
 
     def show_training_info(self) -> InfoMessage:
         """Вернуть информационное сообщение о выполненной тренировке."""
-        return InfoMessage(self.__class__.__name__,
+        return InfoMessage(type(self).__name__,
                            self.duration,
                            self.get_distance(),
                            self.get_mean_speed(),
@@ -72,12 +64,6 @@ class Running(Training):
     """Тренировка: бег."""
     CALORIES_MEAN_SPEED_MULTIPLIER = 18
     CALORIES_MEAN_SPEED_SHIFT = 1.79
-
-    def __init__(self,
-                 action: int,
-                 duration: float,
-                 weight: float) -> None:
-        super().__init__(action, duration, weight)
 
     def get_spent_calories(self) -> float:
         return ((self.CALORIES_MEAN_SPEED_MULTIPLIER
@@ -147,14 +133,16 @@ class Swimming(Training):
                 * self.duration)
 
 
+TYPES_OF_WORKOUT: Dict[str, Type[Training]] = {'SWM': Swimming,
+                                               'RUN': Running,
+                                               'WLK': SportsWalking}
+
+
 def read_package(workout_type: str, data: list) -> Training:
     """Прочитать данные полученные от датчиков."""
-    workout: Dict[str, Type[Training]] = {'SWM': Swimming,
-                                          'RUN': Running,
-                                          'WLK': SportsWalking}
-    if workout_type in workout:
-        return workout[workout_type](*data)
-    raise ValueError('Тренировка не найдена')
+    if workout_type in TYPES_OF_WORKOUT:
+        return TYPES_OF_WORKOUT[workout_type](*data)
+    raise ValueError(f'Тренировка {workout_type} не найдена')
 
 
 def main(training: Training) -> None:
@@ -171,5 +159,4 @@ if __name__ == '__main__':
     ]
 
     for workout_type, data in packages:
-        training = read_package(workout_type, data)
-        main(training)
+        main(read_package(workout_type, data))
